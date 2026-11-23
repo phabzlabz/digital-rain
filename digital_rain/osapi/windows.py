@@ -20,6 +20,7 @@ GWL_STYLE = -16
 WS_POPUP, WS_CHILD, WS_VISIBLE = 0x80000000, 0x40000000, 0x10000000
 HWND_TOPMOST = wintypes.HWND(-1)
 SWP_NOACTIVATE, SWP_SHOWWINDOW = 0x0010, 0x0040
+SW_HIDE = 0
 ERROR_ALREADY_EXISTS = 183
 EDD_GET_DEVICE_INTERFACE_NAME = 0x1
 DISPLAY_DEVICE_ATTACHED_TO_DESKTOP = 0x1
@@ -172,6 +173,7 @@ _rect_ptr = ctypes.POINTER(wintypes.RECT)
 _SIGNATURES = {
     user32: {
         "SetParent": ([wintypes.HWND, wintypes.HWND], wintypes.HWND),
+        "ShowWindow": ([wintypes.HWND, _c_int], wintypes.BOOL),
         "SetWindowPos": (
             [wintypes.HWND, wintypes.HWND, _c_int, _c_int, _c_int, _c_int, wintypes.UINT],
             wintypes.BOOL,
@@ -384,6 +386,10 @@ def embed_in_parent(child, parent, w, h):
 
 def set_topmost(hwnd, x, y, w, h):
     user32.SetWindowPos(hwnd, HWND_TOPMOST, x, y, w, h, SWP_SHOWWINDOW)
+
+
+def hide_window(hwnd):
+    user32.ShowWindow(hwnd, SW_HIDE)
 
 
 def create_event(name):

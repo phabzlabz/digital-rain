@@ -17,7 +17,7 @@ What each name does on Mac:
     stubs         gpu_load_sampler raises RuntimeError, which live_load reports
                   as "unavailable" (no public GPU counter; maybe IOKit later).
                   Windows-only window plumbing raises NotImplementedError:
-                  embed_in_parent, set_topmost (the saver never reparents or
+                  embed_in_parent, set_topmost, hide_window (the saver never reparents or
                   places windows; macOS does it), and the settings-dialog helpers
                   set_dark_title_bar, capture_window, capture_client_rgb,
                   work_area (the Tk settings window is Windows only; the Mac
@@ -293,6 +293,7 @@ def _windows_only(name, why):
 for _name in (
     "embed_in_parent",
     "set_topmost",
+    "hide_window",
 ):
     globals()[_name] = _windows_only(_name, "Windows-only window plumbing")
 for _name in ("set_dark_title_bar", "capture_window", "capture_client_rgb", "work_area"):

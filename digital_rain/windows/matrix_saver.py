@@ -322,6 +322,7 @@ class Session:
         self.dev = DevRun(opts) if opts.seconds is not None else None
         self.result = "quit"
         self.embedded = False
+        self.shown = False
         self._open_window()
         self._start_loop()
 
@@ -339,7 +340,10 @@ class Session:
         flags = pygame.NOFRAME
         # Check runs only: the explicit --check-hidden flag (added by tools/checks/hidden.py
         # to saver launches). The environment never hides a real launch.
-        if self.hidden or opts.start_hidden:
+        # A full-screen window also starts hidden and is shown after its first frame
+        # (_show_after_first_frame): building the renderer takes seconds, and a window
+        # shown before it draws is a blank grey sheet over the desktop.
+        if self.hidden or opts.start_hidden or self._full_screen():
             flags |= pygame.HIDDEN
         hdr_ok = not (opts.preview_hwnd or opts.preview_sim or self.hidden)
         self.renderer = make_renderer(
@@ -365,11 +369,21 @@ class Session:
             if not opts.start_hidden:
                 osapi.embed_in_parent(self.hwnd, opts.preview_hwnd, vw, vh)
                 self.embedded = True
-        elif opts.preview_sim or self.hidden:
-            pass
-        else:
-            self.pygame.mouse.set_visible(False)
-            osapi.set_topmost(self.hwnd, vx, vy, vw, vh)
+        elif self._full_screen():
+            self.pygame.mouse.set_visible(False)  # shown by _show_after_first_frame
+
+    def _full_screen(self):
+        """The real saver window: not a preview, simulated or hidden check run."""
+        opts = self.opts
+        return not (opts.preview_hwnd or opts.preview_sim or self.hidden)
+
+    def _show_after_first_frame(self):
+        """Raise the full-screen window once it holds a finished frame."""
+        if self.shown or not self._full_screen():
+            return
+        self.shown = True
+        vx, vy, vw, vh = self.bounds
+        osapi.set_topmost(self.hwnd, vx, vy, vw, vh)
 
     def _start_loop(self):
         """Frame pacing and the exit gate."""
@@ -401,6 +415,9 @@ class Session:
         return self.result
 
     def close(self):
+        # Hidden first: freeing the GL resources on a visible window can show it blank.
+        if self.shown:
+            osapi.hide_window(self.hwnd)
         self.renderer.close()
         self.pygame.display.quit()
 
@@ -419,6 +436,7 @@ class Session:
             return
         self.frame += 1
         self._embed_after_first_frame()
+        self._show_after_first_frame()
 
         if self.opts.preview_hwnd and not osapi.is_window(self.opts.preview_hwnd):
             self.running = False
