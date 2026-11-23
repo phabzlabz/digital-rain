@@ -47,6 +47,7 @@ INTERFACE = (
     "client_size",
     "embed_in_parent",
     "set_topmost",
+    "hide_window",
     # settings dialog
     "set_dark_title_bar",
     "capture_window",

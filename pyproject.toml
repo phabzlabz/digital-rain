@@ -1,7 +1,7 @@
 [project]
 name = "digital-rain"
 # Must match ProductVersion in version_info.txt, which the builds read (tests/test_version.py).
-version = "1.0.0"
+version = "1.0.1"
 description = "Digital Rain, a Matrix-inspired, GPU-rendered, multi-monitor screensaver for Windows and macOS."
 readme = "README.md"
 requires-python = ">=3.14"

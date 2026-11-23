@@ -2,6 +2,12 @@
 
 Notable changes to Digital Rain. Versions follow [semantic versioning](https://semver.org/).
 
+## 1.0.1
+
+### Fixed
+
+- No grey screen when the saver starts or closes. On Windows the window now appears with its first frame and hides before it closes; on macOS the view stays black until the rain draws.
+
 ## 1.0.0
 
 First public release.

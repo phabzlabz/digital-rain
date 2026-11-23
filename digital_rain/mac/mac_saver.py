@@ -261,6 +261,29 @@ def _tag_layer(view, space):
     return True
 
 
+_gl = None  # OpenGL.framework through ctypes, loaded by _clear_black
+
+
+def _clear_black(glview):
+    """Clear a GL view's surface to black and show it. Covers the window's grey
+    background while the renderer is built (the first frame takes seconds) and
+    after it is freed on stop, when the host can still show the view."""
+    global _gl
+    if glview is None:
+        return
+    if _gl is None:
+        import ctypes
+
+        _gl = ctypes.CDLL("/System/Library/Frameworks/OpenGL.framework/OpenGL")
+        _gl.glClearColor.argtypes = [ctypes.c_float] * 4
+        _gl.glClear.argtypes = [ctypes.c_uint]
+    glc = glview.openGLContext()
+    glc.makeCurrentContext()
+    _gl.glClearColor(0.0, 0.0, 0.0, 1.0)
+    _gl.glClear(0x4000)  # GL_COLOR_BUFFER_BIT
+    glc.flushBuffer()
+
+
 def _screen_id(screen):
     num = screen.deviceDescription().get("NSScreenNumber") if screen is not None else None
     return int(num) if num is not None else None
@@ -404,6 +427,10 @@ class _Saver:
         if win is None:  # not in a window yet: the next call tries again
             return
         self.color_done = True
+        try:  # the host window's default grey shows wherever the GL view has not drawn
+            win.setBackgroundColor_(NSColor.blackColor())
+        except (AttributeError, objc.error) as exc:
+            osapi.log(f"mac_saver: {self.tag()}: window background not set ({exc!r})")
         space = _srgb_space(self.hdr)
         tagged, notes = [], []
         if space is None:
@@ -452,6 +479,7 @@ class _Saver:
         if self.renderer is not None:
             osapi.log(f"mac_saver: {self.tag()}: size {self.size} -> {(pw, ph)}, rebuilding")
             self._close_renderer()
+        self._blank("before the renderer build")
         glc = self.glview.openGLContext()
         glc.makeCurrentContext()
         if self.cfg is None:
@@ -480,6 +508,15 @@ class _Saver:
         )
         self._pick_fps(force=True)
         return True
+
+    def _blank(self, when):
+        """_clear_black on this view's GL surface; a failure is logged, never raised."""
+        try:
+            _clear_black(self.glview)
+        except Exception:
+            osapi.log(
+                f"mac_saver: {self.tag()}: black clear {when} failed\n" + traceback.format_exc()
+            )
 
     def _close_renderer(self):
         r, self.renderer = self.renderer, None
@@ -603,6 +640,8 @@ class _Saver:
         # willstop broadcast stops every full-screen view in the process.
         if name == STOP_NOTE and not self.preview:
             self.stop("willstop notification")
+            if self.renderer is not None:
+                self._blank("on stop")
             self._close_renderer()
         if name == mac_settings.CHANGED_NOTE:
             self.request_reload()
